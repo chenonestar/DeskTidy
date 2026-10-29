@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeskTidy · 需求说明</title>
+<style>
+:root {
+  --paper: #F3F5F8; --surface: #FFFFFF; --ink: #1D2733; --muted: #5B6775;
+  --rule: #DCE1E7; --accent: #2A5C8A; --accent-soft: #E6EEF6;
+  --v1: #2A5C8A; --v2: #5F7334; --v3: #7D848E; --code-bg: #F0F2F5;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #14181D; --surface: #1B2027; --ink: #E4E8ED; --muted: #9AA5B1;
+    --rule: #2E3640; --accent: #86B4E0; --accent-soft: #1F2C3A;
+    --v1: #86B4E0; --v2: #A9C07A; --v3: #9AA2AD; --code-bg: #12161B;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+  font-size: 15.5px; line-height: 1.75;
+}
+.layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; max-width: 1180px; margin: 0 auto; padding: 48px 32px 96px; }
+nav.toc { position: sticky; top: 32px; align-self: start; font-size: 14px; }
+nav.toc p { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--rule); }
+nav.toc a { display: flex; gap: 10px; padding: 5px 0 5px 14px; margin-left: -2px; border-left: 2px solid transparent; color: var(--muted); text-decoration: none; }
+nav.toc a:hover { color: var(--ink); border-left-color: var(--accent); }
+nav.toc .num { color: var(--accent); font-variant-numeric: tabular-nums; min-width: 1.3em; }
+main { min-width: 0; }
+header { padding-bottom: 28px; margin-bottom: 8px; border-bottom: 1px solid var(--rule); }
+header h1 { margin: 0 0 12px; font-size: 34px; line-height: 1.3; font-weight: 600; letter-spacing: 0.01em; }
+header .meta { margin: 0; color: var(--muted); font-size: 14px; }
+h2 { display: flex; align-items: baseline; gap: 14px; margin: 56px 0 16px; font-size: 22px; font-weight: 600; scroll-margin-top: 24px; }
+h2 .num { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 6px; background: var(--accent); color: var(--surface); font-size: 15px; font-weight: 600; flex: none; transform: translateY(-2px); }
+h3 { margin: 32px 0 10px; font-size: 17px; font-weight: 600; scroll-margin-top: 24px; }
+p, ul, ol { max-width: 46em; overflow-wrap: break-word; }
+p { margin: 0 0 14px; }
+ul, ol { padding-left: 1.4em; margin: 0 0 16px; }
+li { margin: 4px 0; }
+strong { font-weight: 600; }
+.table-wrap { overflow-x: auto; margin: 8px 0 22px; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--rule); }
+th { font-weight: 600; color: var(--muted); font-size: 13.5px; white-space: nowrap; background: var(--paper); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { white-space: nowrap; }
+tr.chosen td { background: var(--accent-soft); }
+tr.chosen td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.ver { display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 12.5px; font-weight: 600; border: 1px solid currentColor; }
+.ver-v1 { color: var(--v1); } .ver-v2 { color: var(--v2); } .ver-v3 { color: var(--v3); }
+pre { overflow-x: auto; background: var(--code-bg); border: 1px solid var(--rule); border-radius: 8px; padding: 16px 18px; margin: 8px 0 22px; }
+code { font-family: "Cascadia Mono", Consolas, "Courier New", monospace; font-size: 13.5px; line-height: 1.6; }
+ul.tasks { list-style: none; padding: 0; }
+li.task { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px dashed var(--rule); margin: 0; }
+li.task input { margin-top: 7px; width: 16px; height: 16px; accent-color: var(--accent); flex: none; }
+li.task input:checked + label { color: var(--muted); text-decoration: line-through; }
+a:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; gap: 24px; padding: 28px 18px 64px; }
+  nav.toc { position: static; }
+  header h1 { font-size: 26px; }
+}
+@media print {
+  :root { --paper: #fff; --surface: #fff; --ink: #000; --muted: #444; --rule: #bbb; --accent: #2A5C8A; --accent-soft: #EEF3F8; --code-bg: #f6f6f6; }
+  .layout { display: block; padding: 0; }
+  nav.toc { display: none; }
+  h2, h3 { break-after: avoid; }
+  tr, pre { break-inside: avoid; }
+  .table-wrap { overflow: visible; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc" aria-label="目录">
+<p>目录</p>
+<ol>
+<li><a href="#s1"><span class="num">1</span>背景与目标</a></li>
+<li><a href="#s2"><span class="num">2</span>核心设计决策</a></li>
+<li><a href="#s3"><span class="num">3</span>安全与恢复设计</a></li>
+<li><a href="#s4"><span class="num">4</span>绿色便携与数据存放</a></li>
+<li><a href="#s5"><span class="num">5</span>功能需求</a></li>
+<li><a href="#s6"><span class="num">6</span>非功能需求</a></li>
+<li><a href="#s7"><span class="num">7</span>技术方案建议</a></li>
+<li><a href="#s8"><span class="num">8</span>技术风险与预研项</a></li>
+<li><a href="#s9"><span class="num">9</span>待确认事项</a></li>
+<li><a href="#s10"><span class="num">10</span>修订记录</a></li>
+</ol>
+</nav>
+<main>
+<header>
+<h1>DeskTidy · 需求说明</h1>
+<p class="meta">2026-10-27 初稿 · 2026-10-29 修订　cyx_98</p>
+</header>
+<h2 id="s1"><span class="num">1</span>背景与目标</h2>
+<p>DeskTidy 是一个 Windows 桌面图标整理程序，绿色便携，解压即用。目标是：不改动任何桌面文件，把桌面图标按分组显示，并能用键盘在 3 秒内找到并启动任意一项。现状是图标多且无序，找程序只能靠肉眼逐个扫。</p>
+<p>要达成的结果：</p>
+<ul>
+<li><strong>分组显示</strong>：图标归入可命名的分区（如“开发工具”“办公”“文档”“临时文件”），按区域一眼定位。</li>
+<li><strong>自动归类</strong>：新出现在桌面的图标按规则自动进入对应分组，不需要反复手动整理。</li>
+<li><strong>快速查找</strong>：全局快捷键呼出搜索框，支持中文拼音首字母（输入 wx 找到“微信”），回车即启动。</li>
+<li><strong>可逆</strong>：程序退出、崩溃、卡死、断电或被删除后，都能回到原生桌面，文件一个不少，图标位置不变。</li>
+</ul>
+<p>V1 明确不做：通用启动器（不扫描开始菜单和全盘程序，只管桌面上的东西）、壁纸与小部件等装饰功能、云同步、安装程序（绿色便携，解压即用）。</p>
+<p>同类产品有 Stardock Fences、腾讯桌面整理、360 桌面助手。自己写的价值在于：无广告和捆绑，归类规则按自己习惯定制，数据完全本地。</p>
+<h2 id="s2"><span class="num">2</span>核心设计决策</h2>
+<p>采用“虚拟视图”方案：桌面文件原地不动，程序临时隐藏系统桌面图标，自己读取桌面目录并在桌面层绘制分组面板。这是三种可行方案里最安全、最容易做稳的一种。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>做法</th>
+<th>优点</th>
+<th>缺点</th>
+<th>结论</th>
+</tr>
+</thead>
+<tbody>
+<tr class="chosen">
+<td>A. 虚拟视图</td>
+<td>临时隐藏系统图标，程序读取桌面目录自绘分组</td>
+<td>不碰文件，退出即复原；布局完全自控，不受分辨率变化影响</td>
+<td>系统右键菜单、拖放等原生交互需要自己补齐</td>
+<td><strong>采用</strong></td>
+</tr>
+<tr>
+<td>B. 移动文件</td>
+<td>把文件搬进各分组对应的真实文件夹，桌面只留分组窗口</td>
+<td>实现简单</td>
+<td>文件路径改变，依赖原路径的脚本和程序会出错；软件更新会在桌面重建快捷方式；卸载要搬回</td>
+<td>不采用</td>
+</tr>
+<tr>
+<td>C. 原生图标定位</td>
+<td>画分区背景框，跨进程移动 Explorer 桌面列表里真实图标的坐标（Fences 的做法）</td>
+<td>原生交互全部保留</td>
+<td>跨进程操作 Explorer，分辨率、DPI、Explorer 重启后布局易乱；实现难度最高</td>
+<td>不采用</td>
+</tr>
+</tbody>
+</table></div>
+<p>方案 A 的运行规则：</p>
+<ol>
+<li>启动后先显示分组面板，确认加载正常后才隐藏系统桌面图标；隐藏是临时的，不改系统设置（见 3.1）。</li>
+<li>读取“当前用户桌面”和“公共桌面”两个目录，合并后按分组显示。</li>
+<li>监听两个目录的新增、删除、重命名，面板实时同步。</li>
+<li>任何异常的最终结果都是回到原生桌面（见第 3 节）。</li>
+</ol>
+<h2 id="s3"><span class="num">3</span>安全与恢复设计</h2>
+<p>总原则：<strong>出现任何异常，原桌面的文件内容和图标位置都不受影响，并且一定能回到原生桌面。</strong>为此遵循三条准则：</p>
+<ol>
+<li><strong>失败即回到原生桌面</strong>：崩溃、卡死、断电、Explorer 重启、界面加载失败，任何意外的最终结果都是系统原生桌面，而不是“图标没了、面板也没了”。</li>
+<li><strong>对系统只做临时、可撤销的修改，先记录再修改</strong>：改动任何系统状态之前，先把原值和恢复方法写入 state.json。</li>
+<li><strong>多层兜底</strong>：不依赖单一恢复机制，一层失效还有下一层。</li>
+</ol>
+<h3 id="s3-1">3.1 隐藏系统图标的方式</h3>
+<p>采用<strong>临时隐藏</strong>：对桌面的 SysListView32 窗口调用 ShowWindow(SW_HIDE)，不改“显示桌面图标”系统设置。隐藏状态只存在于 Explorer 进程内存中，Explorer 重启、注销或重启电脑后图标自动恢复显示，最坏情况下系统也会自己回到原桌面。</p>
+<ul>
+<li>用 SetWinEventHook 监听 EVENT_OBJECT_SHOW：Explorer 自行重新显示图标列表时，在面板正常的前提下再次隐藏。</li>
+<li>用户原本就关闭了“显示桌面图标”的，DeskTidy 不改动它，退出时保持原样。</li>
+<li>启动顺序：显示分组面板 → 项目加载完成 → 向守护进程报告就绪 → 拍图标位置快照 → 写 state.json → 隐藏系统图标。任何一步失败都不隐藏。</li>
+</ul>
+<p>退路（仅当临时隐藏在预研中被证明不可行时采用）：切换系统“显示桌面图标”设置，这会持久写入注册表 HideIcons。此时必须先写恢复再修改：隐藏前把原 HideIcons 值写入 state.json，并在 HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce 登记一条恢复命令；正常恢复后删除该命令。这样即使断电，下次登录也会先执行恢复，且不受开机自启开关影响。</p>
+<h3 id="s3-2">3.2 异常场景与恢复</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>保障措施</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>正常退出、托盘“显示原生桌面”</td>
+<td>立即恢复系统图标显示</td>
+</tr>
+<tr>
+<td>主进程崩溃</td>
+<td>守护进程发现主进程退出后，5 秒内恢复</td>
+</tr>
+<tr>
+<td>主进程卡死、界面白屏</td>
+<td>前端每秒经主进程向守护进程发送心跳，超过 5 秒未收到即恢复；进程还在不代表程序正常</td>
+</tr>
+<tr>
+<td>WebView2 渲染进程崩溃</td>
+<td>收到 ProcessFailed 事件立即恢复，同时由心跳兜底</td>
+</tr>
+<tr>
+<td>启动或加载失败</td>
+<td>完成就绪握手之前从不隐藏系统图标</td>
+</tr>
+<tr>
+<td>Explorer 重启</td>
+<td>系统图标随 Explorer 重启自动显示；DeskTidy 收到 TaskbarCreated 后重新挂回面板，确认正常后再隐藏</td>
+</tr>
+<tr>
+<td>断电、强制关机</td>
+<td>临时隐藏方案下，重启后自然恢复；退路方案下，由 RunOnce 在下次登录时恢复；DeskTidy 启动时读 state.json，发现上次未正常退出则先恢复再继续</td>
+</tr>
+<tr>
+<td>连续崩溃</td>
+<td>连续 3 次异常退出后进入安全模式：只显示分组面板，不隐藏系统图标，并提示用户</td>
+</tr>
+<tr>
+<td>用户手动逃生</td>
+<td>应急快捷键 Ctrl+Alt+Shift+D（由守护进程注册，主进程卡死也可用）；程序目录内的“恢复原桌面.cmd”；按住 Shift 启动进入安全模式</td>
+</tr>
+<tr>
+<td>不再使用、删除程序</td>
+<td>先用托盘“退出并清理”：恢复原桌面并删除 DeskTidy 写过的注册表项，然后删除程序目录即可</td>
+</tr>
+<tr>
+<td>程序所在可移动磁盘被拔出</td>
+<td>见第 4 节“可移动磁盘”和风险第 7 项</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="s3-3">3.3 原桌面图标位置保护</h3>
+<p>DeskTidy 自己不移动系统图标，但隐藏期间 Explorer 可能因分辨率变化、拔插显示器、新文件加入等原因自行重排。因此：</p>
+<ul>
+<li>每次隐藏前，通过公开的 COM 接口读取每个图标的坐标，连同分辨率、DPI、“自动排列”和“对齐到网格”状态保存为快照，保留最近 5 份。不使用跨进程读写 Explorer 内存的做法。</li>
+<li>托盘提供“恢复原桌面图标位置”，可选择某一份快照写回。</li>
+<li>同时记录桌面文件清单（路径、大小、修改时间），用于自检“文件一个不少”和排查问题。</li>
+</ul>
+<h3 id="s3-4">3.4 文件操作</h3>
+<ul>
+<li>DeskTidy 从不自动写入桌面目录。写桌面文件的代码集中在一个模块，只能由用户在菜单中明确选择的重命名、删除调用；删除一律进回收站。</li>
+<li>公共桌面（C:\Users\Public\Desktop）默认需要管理员权限才能修改。DeskTidy 本身保持普通权限，由 IFileOperation 像资源管理器一样弹出 UAC 确认；这类项目的菜单项显示盾牌图标。</li>
+</ul>
+<h2 id="s4"><span class="num">4</span>绿色便携与数据存放</h2>
+<p>DeskTidy 是绿色便携程序：无安装程序，所有数据写在程序目录下的 data\ 中，不写程序目录以外的文件。</p>
+<pre><code>DeskTidy\
+├─ DeskTidy.exe                 主程序
+├─ DeskTidyGuard.exe            守护进程
+├─ 恢复原桌面.cmd               调用 DeskTidyGuard.exe --restore，不依赖主程序
+└─ data\
+   ├─ config.json               分组、规则、布局、使用统计（可随目录带到别的电脑）
+   ├─ backup\                   config.json 最近 5 份备份
+   └─ local\&lt;计算机名&gt;-&lt;用户名&gt;\  只属于这台电脑、这个用户的数据
+      ├─ state.json             当前对系统做了哪些修改（恢复依据）
+      ├─ snapshots\             桌面图标位置快照，最近 5 份
+      ├─ inventory\             桌面文件清单
+      ├─ icon-cache\            图标缓存
+      ├─ webview2\              WebView2 用户数据目录
+      └─ logs\</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>事项</th>
+<th>要求</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>目录可写检查</td>
+<td>启动时在 data\ 试写临时文件。不可写（如放在 Program Files 或只读介质上）时不隐藏系统图标，提示把程序移到可写位置；不悄悄改写到 %APPDATA%，避免配置“找不到”</td>
+</tr>
+<tr>
+<td>跨电脑携带</td>
+<td>config.json 中的项目路径相对“用户桌面”“公共桌面”保存，复制目录到别的电脑或别的用户仍可用；本机状态放在 local\&lt;计算机名&gt;-&lt;用户名&gt;\ 下，不会被另一台电脑误用</td>
+</tr>
+<tr>
+<td>注册表痕迹</td>
+<td>只有两处，都在 HKCU：开机自启（用户打开开关时写 Run）；退路方案隐藏期间的 RunOnce。托盘“退出并清理”恢复原桌面并删除这两项</td>
+</tr>
+<tr>
+<td>移动程序目录</td>
+<td>自启已开启时，每次启动校验 Run 中的路径，与当前路径不同就更新</td>
+</tr>
+<tr>
+<td>单实例</td>
+<td>按当前用户会话加互斥体，两份便携副本不会同时运行、互相隐藏或恢复图标</td>
+</tr>
+<tr>
+<td>可移动磁盘</td>
+<td>检测到程序位于可移动磁盘时给出提示；收到“安全弹出”请求时先恢复原桌面再退出。直接拔盘时进程可能来不及处理，见风险第 7 项</td>
+</tr>
+<tr>
+<td>WebView2 运行时</td>
+<td>启动时检测 WebView2 Runtime（早期 Win10 可能没有），缺失时不隐藏系统图标并提示安装；用户数据目录指向 data\local\…\webview2</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="s5"><span class="num">5</span>功能需求</h2>
+<p>V1 共 11 项，做完即可替代当前桌面日常使用；V2 补齐原生交互和多显示器，V3 是锦上添花。编号保持稳定，新增项顺延编号。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>功能</th>
+<th>说明</th>
+<th>版本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F01</td>
+<td>桌面项目读取</td>
+<td>合并“当前用户桌面”和“公共桌面”；支持 .lnk、.url、.exe、文件夹和普通文件；显示真实图标和名称；公共桌面项目加角标，同名项目同时显示，鼠标悬停显示完整路径</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F02</td>
+<td>分组管理</td>
+<td>新建、重命名、删除分组；每个分组是桌面上可拖动、可调大小的面板；删除分组时其中项目回到“未归类”</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F03</td>
+<td>手动归类</td>
+<td>拖动图标在分组间移动、在分组内排序；一个项目只属于一个分组</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F04</td>
+<td>自动归类规则</td>
+<td>条件可选扩展名、文件类型（程序/文档/图片/压缩包/文件夹/网址）、名称关键词或正则、快捷方式目标路径；按顺序匹配，首个命中生效；只作用于新出现的项目，不覆盖手动归类；另有“按规则重新整理全部”按钮；正则使用 Go（RE2）语法，保存时校验</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F05</td>
+<td>未归类区</td>
+<td>不命中任何规则的新项目进入“未归类”分组并高亮，直到用户处理</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F06</td>
+<td>快速搜索</td>
+<td>全局快捷键呼出（默认 Ctrl+Alt+D，可改；注册失败时提示并打开设置修改）；匹配名称、拼音全拼、拼音首字母；上下键选择，回车启动，Esc 关闭</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F07</td>
+<td>启动与常用操作</td>
+<td>双击或回车打开；右键菜单含打开、以管理员身份运行、打开所在位置、重命名、删除到回收站、属性；需要管理员权限的操作显示盾牌图标，由系统弹出 UAC 确认</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F08</td>
+<td>布局持久化</td>
+<td>分组位置、大小、项目归属和排序全部保存到程序目录 data\config.json，重启后完全还原</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F09</td>
+<td>系统图标隐藏与恢复</td>
+<td>面板就绪并拍下图标位置快照后，临时隐藏系统桌面图标（不改系统设置）；退出时恢复；托盘可临时切回原生桌面（见 3.1）</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F10</td>
+<td>托盘与自启</td>
+<td>托盘图标提供设置、临时显示原生桌面、恢复原桌面图标位置、退出、退出并清理；开机自启开关</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F20</td>
+<td>恢复原桌面</td>
+<td>应急快捷键 Ctrl+Alt+Shift+D（守护进程注册，主进程卡死也可用）；程序目录内“恢复原桌面.cmd”，不依赖主程序；按住 Shift 启动进入安全模式；从快照恢复图标位置（见 3.2、3.3）</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F11</td>
+<td>分组折叠</td>
+<td>分组可折叠为标题栏；双击桌面空白处一键收起或展开全部</td>
+<td><span class="ver ver-v2">V2</span></td>
+</tr>
+<tr>
+<td>F12</td>
+<td>完整系统右键菜单</td>
+<td>显示与资源管理器一致的右键菜单，含 7-Zip、Git 等第三方菜单项</td>
+<td><span class="ver ver-v2">V2</span></td>
+</tr>
+<tr>
+<td>F13</td>
+<td>拖放进出</td>
+<td>从其他窗口拖文件到分组，即放到桌面并归入该分组；从分组拖出到其他程序（如拖附件进邮件）</td>
+<td><span class="ver ver-v2">V2</span></td>
+</tr>
+<tr>
+<td>F14</td>
+<td>多显示器与 DPI</td>
+<td>每个显示器独立布局；拔插显示器或改分辨率后，分组自动收回可见区域</td>
+<td><span class="ver ver-v2">V2</span></td>
+</tr>
+<tr>
+<td>F15</td>
+<td>使用统计</td>
+<td>记录启动次数和最近使用时间；分组内可按常用度排序；搜索结果按使用频率加权</td>
+<td><span class="ver ver-v2">V2</span></td>
+</tr>
+<tr>
+<td>F16</td>
+<td>导入导出</td>
+<td>规则和布局导出为 JSON，可单独迁移规则；整体迁移直接复制程序目录即可</td>
+<td><span class="ver ver-v2">V2</span></td>
+</tr>
+<tr>
+<td>F17</td>
+<td>闲置项提示</td>
+<td>N 天未使用的项目标记出来，可一键移入“闲置”分组</td>
+<td><span class="ver ver-v3">V3</span></td>
+</tr>
+<tr>
+<td>F18</td>
+<td>外观设置</td>
+<td>分组背景颜色、透明度、毛玻璃，图标大小</td>
+<td><span class="ver ver-v3">V3</span></td>
+</tr>
+<tr>
+<td>F19</td>
+<td>文件夹映射分组</td>
+<td>一个分组直接显示某个真实文件夹的内容，不限于桌面</td>
+<td><span class="ver ver-v3">V3</span></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="s6"><span class="num">6</span>非功能需求</h2>
+<p>第一条硬性要求：程序在任何情况下都不能让桌面文件丢失或图标位置错乱，也不能让用户面对一个“图标全没了”的桌面。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>类别</th>
+<th>要求</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>文件安全</td>
+<td>程序自身从不移动、改写桌面文件；只有用户在菜单中明确选择重命名或删除时才操作，删除一律进回收站（见 3.4）</td>
+</tr>
+<tr>
+<td>回到原桌面</td>
+<td>任何异常的最终结果都是原生桌面（见 3.2）；断电或强制关机后，下次登录必须看到原生桌面</td>
+</tr>
+<tr>
+<td>崩溃与卡死</td>
+<td>守护进程同时监视主进程退出和心跳，异常后 5 秒内恢复系统图标显示；连续 3 次异常退出后进入安全模式</td>
+</tr>
+<tr>
+<td>Explorer 重启</td>
+<td>监听 TaskbarCreated 消息，Explorer 重启后 5 秒内重新挂回桌面层，确认面板正常后再隐藏系统图标</td>
+</tr>
+<tr>
+<td>图标位置</td>
+<td>每次隐藏前拍位置快照，保留最近 5 份，可一键写回（见 3.3）</td>
+</tr>
+<tr>
+<td>桌面层行为</td>
+<td>分组面板始终在普通窗口之下；按 Win+D 或“显示桌面”后面板仍可见、可操作</td>
+</tr>
+<tr>
+<td>性能</td>
+<td>冷启动到面板显示 ≤ 2 秒；空闲 CPU 接近 0%；内存 ≤ 150 MB；桌面 500 个项目时搜索响应 ≤ 50 毫秒</td>
+</tr>
+<tr>
+<td>兼容范围</td>
+<td>Windows 10 x64（1903 及以上），需要 WebView2 Runtime；DPI 缩放 100%–200%；Windows 11 尽量兼容，不作为验收条件</td>
+</tr>
+<tr>
+<td>权限</td>
+<td>普通用户权限运行，不需要管理员；“以管理员身份运行”只作用于被启动的程序；修改公共桌面项目时由系统弹出 UAC 确认</td>
+</tr>
+<tr>
+<td>绿色便携</td>
+<td>不写程序目录以外的文件；注册表只用 HKCU 下的 Run 和 RunOnce；“退出并清理”后删除目录即无残留（见第 4 节）</td>
+</tr>
+<tr>
+<td>数据存储</td>
+<td>存于程序目录 data\ 下的 JSON 文件；写入用“临时文件 + 重命名”保证原子性，保留最近 5 份备份</td>
+</tr>
+<tr>
+<td>项目标识</td>
+<td>以相对桌面根的路径识别项目，另记 NTFS 文件 ID 和快捷方式目标；运行中的重命名通过目录监听跟随；启动时核对一次，程序关闭期间的改名按文件 ID 和目标路径匹配；找不到的项目记录保留 30 天，同路径重新出现（如软件更新重建快捷方式）时回到原分组</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="s7"><span class="num">7</span>技术方案建议</h2>
+<p>推荐 Wails v2：Go 负责 Win32 调用和文件监听，React + TypeScript 负责界面，渲染用系统自带的 WebView2。这个组合正好对应 TypeScript 为主、Go 为辅的技能栈，体积和常驻内存都远小于 Electron。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>常驻内存（估计）</th>
+<th>调 Win32</th>
+<th>结论</th>
+</tr>
+</thead>
+<tbody>
+<tr class="chosen">
+<td>Wails v2（Go + React）</td>
+<td>约 80–120 MB</td>
+<td>golang.org/x/sys/windows 直接调用，COM 用 go-ole</td>
+<td><strong>推荐</strong></td>
+</tr>
+<tr>
+<td>Tauri（Rust + React）</td>
+<td>约 60–100 MB</td>
+<td>windows-rs，最完整</td>
+<td>备选，需要 Rust</td>
+</tr>
+<tr>
+<td>Electron</td>
+<td>约 200 MB 以上</td>
+<td>需要 Node 原生模块</td>
+<td>不推荐，常驻桌面太重</td>
+</tr>
+<tr>
+<td>C# + WPF</td>
+<td>约 60–100 MB</td>
+<td>最方便</td>
+<td>备选，换语言</td>
+</tr>
+</tbody>
+</table></div>
+<p>“挂到桌面层、Win+D 不隐藏”这部分能力，桌面备忘程序同样需要，建议做成独立 Go 包，两个项目共用。</p>
+<p>关键实现点：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>能力</th>
+<th>实现方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>定位桌面目录</td>
+<td>SHGetKnownFolderPath，取 FOLDERID_Desktop 和 FOLDERID_PublicDesktop</td>
+</tr>
+<tr>
+<td>目录监听</td>
+<td>ReadDirectoryChangesW（fsnotify 封装），事件去抖 300 毫秒</td>
+</tr>
+<tr>
+<td>图标提取</td>
+<td>IShellItemImageFactory::GetImage，按“路径 + 修改时间”缓存为 PNG，存于 data\local\…\icon-cache</td>
+</tr>
+<tr>
+<td>快捷方式解析</td>
+<td>IShellLink 读取目标路径，供 F04 的“目标路径”规则和项目核对使用</td>
+</tr>
+<tr>
+<td>项目指纹</td>
+<td>GetFileInformationByHandleEx(FileIdInfo) 取 NTFS 文件 ID；只在本机有效，换电脑后仅按路径匹配</td>
+</tr>
+<tr>
+<td>隐藏/恢复系统图标</td>
+<td>对桌面 SysListView32 调用 ShowWindow(SW_HIDE / SW_SHOW)；SetWinEventHook(EVENT_OBJECT_SHOW) 防止被 Explorer 重新显示。退路：向 SHELLDLL_DefView 发送切换图标显示的命令，配合 state.json 和 RunOnce</td>
+</tr>
+<tr>
+<td>图标位置快照与恢复</td>
+<td>IShellWindows::FindWindowSW(SWC_DESKTOP) 取得桌面 IFolderView；GetItemPosition 读取、SelectAndPositionItems 写回；IFolderView2::GetCurrentFolderFlags 读取自动排列和对齐网格状态</td>
+</tr>
+<tr>
+<td>守护进程</td>
+<td>DeskTidyGuard.exe 由主进程启动；OpenProcess + WaitForSingleObject 监视主进程退出；命名管道接收心跳；RegisterHotKey 注册应急快捷键；--restore 参数独立执行恢复</td>
+</tr>
+<tr>
+<td>单实例</td>
+<td>CreateMutex，名称 Local\DeskTidy（按用户会话隔离）</td>
+</tr>
+<tr>
+<td>安全弹出</td>
+<td>RegisterDeviceNotification 监听程序所在卷的 DBT_DEVICEQUERYREMOVE</td>
+</tr>
+<tr>
+<td>WebView2 数据目录</td>
+<td>Wails 的 WebviewUserDataPath 指向 data\local\…\webview2，避免写到 %APPDATA%</td>
+</tr>
+<tr>
+<td>启动与管理员运行</td>
+<td>ShellExecuteEx，verb 分别为 open、runas、properties</td>
+</tr>
+<tr>
+<td>打开所在位置</td>
+<td>SHOpenFolderAndSelectItems</td>
+</tr>
+<tr>
+<td>重命名与删除</td>
+<td>IFileOperation，删除带 FOFX_RECYCLEONDELETE；受保护位置由它弹出 UAC 提权</td>
+</tr>
+<tr>
+<td>全局快捷键</td>
+<td>RegisterHotKey；注册失败时提示并打开设置</td>
+</tr>
+<tr>
+<td>规则匹配</td>
+<td>在 Go 侧用 regexp（RE2 语法，线性时间，写错的正则也不会卡死程序），保存规则时校验</td>
+</tr>
+<tr>
+<td>拼音搜索</td>
+<td>前端用 pinyin-pro 为每个名称生成全拼和首字母索引</td>
+</tr>
+<tr>
+<td>开机自启</td>
+<td>写 HKCU 下的 Run 注册表项，值为当前 DeskTidy.exe 完整路径，每次启动校验</td>
+</tr>
+</tbody>
+</table></div>
+<p>配置数据模型（data\config.json，示意）：</p>
+<pre><code class="language-json">{
+  "version": 2,
+  "groups": [
+    {
+      "id": "g-dev",
+      "name": "开发工具",
+      "monitor": "DISPLAY1",
+      "rect": { "x": 40, "y": 40, "w": 320, "h": 240 },
+      "collapsed": false,
+      "items": [
+        {
+          "root": "desktop",
+          "name": "VS Code.lnk",
+          "fileId": "0x00000000000000000005000000012a3f",
+          "target": "%LOCALAPPDATA%\\Programs\\Microsoft VS Code\\Code.exe"
+        }
+      ]
+    }
+  ],
+  "rules": [
+    { "id": "r1", "groupId": "g-dev", "field": "shortcutTarget", "op": "regex", "value": "(?i)jetbrains|vs code" }
+  ],
+  "removed": [
+    { "root": "desktop", "name": "旧安装包.zip", "groupId": "g-dev", "removedAt": "2026-10-20T10:00:00+08:00" }
+  ],
+  "stats": {
+    "desktop/VS Code.lnk": { "launches": 42, "lastUsed": "2026-10-27T09:00:00+08:00" }
+  }
+}
+</code></pre>
+<p>root 取值 desktop（当前用户桌面）或 publicDesktop（公共桌面）。本机状态（data\local\…\state.json，示意）：</p>
+<pre><code class="language-json">{
+  "pid": 12345,
+  "startedAt": "2026-10-29T09:00:00+08:00",
+  "cleanExit": false,
+  "crashCount": 0,
+  "hideMethod": "showWindow",
+  "originalHideIcons": 0,
+  "runOnceRegistered": false,
+  "snapshot": "snapshots/2026-10-29T09-00-00.json"
+}
+</code></pre>
+<h2 id="s8"><span class="num">8</span>技术风险与预研项</h2>
+<p>动手写 V1 之前，先用一个最小 Demo 验证第 1、4、5、6 项：第 1 项不通，整体方案就要调整；第 4 项不通，改用 3.1 中的退路方案。第 2、3 项属于 V2，可以等 V1 完成后再验证；第 7 项在 V1 开发中验证。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>风险</th>
+<th>预研方式</th>
+<th>退路</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>面板挂到桌面层后能否正常接收鼠标键盘；Win+D 后是否仍可见</td>
+<td>Demo 对比两种做法：父窗口设为桌面 WorkerW；普通窗口置底并拦截 WM_WINDOWPOSCHANGING</td>
+<td>普通置底窗口 + 监听前台窗口变化，Win+D 后自动重新显示</td>
+</tr>
+<tr>
+<td>2</td>
+<td>完整系统右键菜单（F12）需要 IContextMenu2/3 及菜单消息转发，Go 下实现繁琐</td>
+<td>用 go-ole 调 IContextMenu，TrackPopupMenu 弹出</td>
+<td>V1 自定义菜单已覆盖常用操作；必要时用 C 写一个小 DLL</td>
+</tr>
+<tr>
+<td>3</td>
+<td>WebView2 不能把本地文件作为系统拖放源（F13 拖出）</td>
+<td>鼠标按下后由 Go 侧调用 DoDragDrop 接管拖拽</td>
+<td>用“复制文件”菜单代替拖出</td>
+</tr>
+<tr>
+<td>4</td>
+<td>临时隐藏（SW_HIDE）依赖未公开的 Explorer 行为：桌面刷新、改分辨率、用户右键切换“显示桌面图标”后是否被重新显示；隐藏后桌面空白处的右键和双击是否正常</td>
+<td>在 Win10 22H2 和 Win11 各验证一次</td>
+<td>改为切换“显示桌面图标”设置（HideIcons），配合 state.json 和 RunOnce 保证可恢复（见 3.1）</td>
+</tr>
+<tr>
+<td>5</td>
+<td>WebView2 多进程，内存可能超过 150 MB</td>
+<td>Demo 加载 300 个图标后测量常驻内存</td>
+<td>图标懒加载、限制缓存；仍超标则改用 Tauri</td>
+</tr>
+<tr>
+<td>6</td>
+<td>图标位置快照：IFolderView 能否在关闭“自动排列”时准确读取和写回坐标；多显示器下坐标是否正确</td>
+<td>Demo 读取坐标、手动打乱、写回后比对</td>
+<td>备份注册表 HKCU\Software\Microsoft\Windows\Shell\Bags\1\Desktop；恢复时先结束 Explorer，写回后再启动</td>
+</tr>
+<tr>
+<td>7</td>
+<td>程序在可移动磁盘上运行时被直接拔出，主进程和守护进程可能同时退出，系统图标保持隐藏，直到 Explorer 重启或注销</td>
+<td>在 U 盘上运行后直接拔出，观察守护进程能否存活并完成恢复</td>
+<td>在可移动磁盘上运行时不隐藏系统图标，只显示分组面板</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="s9"><span class="num">9</span>待确认事项</h2>
+<p>以下每项都已给出默认值；不改就按默认值进入设计。已勾选的为已确认项。</p>
+<ul class="tasks">
+<li class="task"><input type="checkbox" id="t1"><label for="t1">是否采用方案 A（虚拟视图，文件不动）？默认：采用。</label></li>
+<li class="task"><input type="checkbox" id="t2"><label for="t2">技术栈是否用 Wails（Go + React）？默认：是。</label></li>
+<li class="task"><input type="checkbox" id="t3"><label for="t3">管理范围：只管程序快捷方式，还是文档、压缩包、文件夹等全部纳入？默认：全部纳入。</label></li>
+<li class="task"><input type="checkbox" id="t4"><label for="t4">首次运行的预设分组：开发工具、办公、文档、图片、压缩包、未归类？默认：提供这套预设，可删改。</label></li>
+<li class="task"><input type="checkbox" id="t5"><label for="t5">搜索快捷键 Ctrl+Alt+D 是否与现有软件冲突？默认：保留，注册失败时提示修改。</label></li>
+<li class="task"><input type="checkbox" id="t6"><label for="t6">Windows 11 是否也要作为验收环境？默认：否。</label></li>
+<li class="task"><input type="checkbox" id="t7" checked><label for="t7">程序名称：DeskTidy。</label></li>
+<li class="task"><input type="checkbox" id="t8" checked><label for="t8">发行形式：绿色便携，配置写在程序目录 data\ 中。</label></li>
+<li class="task"><input type="checkbox" id="t9"><label for="t9">应急恢复快捷键用 Ctrl+Alt+Shift+D？默认：是。</label></li>
+<li class="task"><input type="checkbox" id="t10"><label for="t10">程序目录不可写时：不隐藏系统图标，提示移到可写位置？默认：是。</label></li>
+<li class="task"><input type="checkbox" id="t11"><label for="t11">可移动磁盘上运行：先按“提示 + 安全弹出时恢复”处理，风险第 7 项验证不通过时改为不隐藏系统图标？默认：是。</label></li>
+<li class="task"><input type="checkbox" id="t12"><label for="t12">是否另出一个内置 WebView2 固定版本运行时的发行包（体积明显增大）？默认：否。</label></li>
+</ul>
+<h2 id="s10"><span class="num">10</span>修订记录</h2>
+<ul>
+<li><strong>2026-10-29</strong>：程序名定为 DeskTidy；确定绿色便携、配置写在程序目录。新增第 3 节“安全与恢复设计”、第 4 节“绿色便携与数据存放”、功能 F20“恢复原桌面”；隐藏系统图标改为临时隐藏，原方案降为退路；新增图标位置快照、心跳检测、安全模式、公共桌面 UAC 处理、项目指纹与启动核对；更新 F01、F04、F06–F10、F16、非功能需求、实现要点、数据模型和风险第 4 项，新增风险第 6、7 项。</li>
+<li><strong>2026-10-27</strong>：初稿。</li>
+</ul>
+</main>
+</div>
+</body>
+</html>
