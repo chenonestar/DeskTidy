@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeskTidy Demo</title>
+<style>
+:root {
+  --paper: #F3F5F8; --surface: #FFFFFF; --ink: #1D2733; --muted: #5B6775;
+  --rule: #DCE1E7; --accent: #2A5C8A; --accent-soft: #E6EEF6;
+  --pass: #2E7D4F; --fail: #B3392F; --info: #5B6775; --skip: #9A6B12;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #14181D; --surface: #1B2027; --ink: #E4E8ED; --muted: #9AA5B1;
+    --rule: #2E3640; --accent: #86B4E0; --accent-soft: #1F2C3A;
+    --pass: #6CC08D; --fail: #E57A70; --info: #9AA5B1; --skip: #D6A84E;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+  font-size: 14px; line-height: 1.6; display: flex; flex-direction: column; overflow: hidden;
+  border: 1px solid var(--rule);
+}
+header { --wails-draggable: drag; display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--rule); }
+header h1 { margin: 0; font-size: 15px; font-weight: 600; }
+header .sys { color: var(--muted); font-size: 12px; flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+header button { --wails-draggable: no-drag; }
+nav { display: flex; gap: 2px; padding: 0 14px; background: var(--surface); border-bottom: 1px solid var(--rule); }
+nav button { border: 0; background: none; padding: 9px 12px; color: var(--muted); border-bottom: 2px solid transparent; border-radius: 0; }
+nav button.on { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+main { flex: 1; overflow: auto; padding: 16px 18px; }
+section { display: none; } section.on { display: block; }
+h2 { font-size: 16px; margin: 0 0 6px; }
+h3 { font-size: 14px; margin: 18px 0 6px; }
+p { margin: 0 0 10px; color: var(--muted); max-width: 60em; }
+button { font: inherit; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+button:disabled { opacity: .5; cursor: default; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; margin: 10px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+.r-pass { color: var(--pass); font-weight: 600; } .r-fail { color: var(--fail); font-weight: 600; }
+.r-info { color: var(--info); } .r-skip { color: var(--skip); font-weight: 600; }
+select, input[type=text], input[type=number], textarea { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 4px 8px; }
+textarea { width: 100%; min-height: 90px; }
+.modes label { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; }
+.modes small { color: var(--muted); display: block; }
+#target { min-width: 120px; }
+.icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; max-height: 260px; overflow: auto; }
+.icons div { text-align: center; font-size: 11px; color: var(--muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.icons img { width: 48px; height: 48px; display: block; margin: 0 auto 2px; }
+#log { height: 140px; overflow: auto; margin: 0; padding: 8px 14px; background: var(--surface); border-top: 1px solid var(--rule); font: 12px/1.5 "Cascadia Mono", Consolas, monospace; color: var(--muted); white-space: pre-wrap; }
+.status { font-size: 12px; color: var(--muted); }
+.warn { color: var(--skip); }
+</style>
+</head>
+<body>
+<header>
+  <h1>DeskTidy Demo · 预研验证</h1>
+  <div class="sys" id="sys">读取系统信息…</div>
+  <button id="btnRestore" title="恢复系统图标、面板模式，并写回未恢复的图标位置">恢复原桌面</button>
+  <button id="btnQuit">退出</button>
+</header>
+<nav id="tabs">
+  <button data-tab="r1" class="on">风险 1 · 面板挂桌面层</button>
+  <button data-tab="r4">风险 4 · 隐藏系统图标</button>
+  <button data-tab="r5">风险 5 · 内存</button>
+  <button data-tab="r6">风险 6 · 图标位置</button>
+  <button data-tab="rep">生成报告</button>
+</nav>
+<main>
+
+<section id="r1" class="on">
+  <h2>风险 1：面板挂到桌面层后能否正常操作，Win+D 后是否仍可见</h2>
+  <p>本窗口就是“面板”。逐个切换下面的模式，每个模式都跑一次自动测试，再按清单手动检查。自动测试会模拟按 Win+D、移动鼠标并输入文字，约 5 秒，期间请不要动鼠标键盘，并让本窗口不被其他窗口完全遮住。</p>
+  <div class="card modes" id="modes">
+    <label><input type="radio" name="mode" value="normal" checked><span>普通窗口（对照组）<small>不做任何处理；Win+D 后应当看不到，用来对照</small></span></label>
+    <label><input type="radio" name="mode" value="child"><span>A. 子窗口挂入桌面<small>SetParent 到桌面 SHELLDLL_DefView 的宿主窗口（Progman 或 WorkerW）</small></span></label>
+    <label><input type="radio" name="mode" value="owned"><span>B. 桌面拥有的置底窗口<small>owner 设为桌面宿主窗口，并拦截 WM_WINDOWPOSCHANGING 始终置底（Rainmeter 等常用做法，需求说明未列，作为补充对比）</small></span></label>
+    <label><input type="radio" name="mode" value="bottom"><span>C. 置底窗口 + 前台监听<small>拦截 WM_WINDOWPOSCHANGING 置底；桌面成为前台时临时提上来，其他程序成为前台时压回</small></span></label>
+  </div>
+  <div class="row">
+    <button id="target">测试按钮（点击 0 次）</button>
+    <input type="text" id="typeBox" placeholder="测试输入框" style="width:220px">
+    <button class="primary" id="btnAuto1">自动测试当前模式</button>
+    <span class="status" id="st1"></span>
+  </div>
+  <h3>自动测试结果</h3>
+  <div id="res1"></div>
+  <h3>手动检查清单</h3>
+  <table id="manual1"></table>
+</section>
+
+<section id="r4">
+  <h2>风险 4：用 SW_HIDE 临时隐藏系统图标是否稳定</h2>
+  <p>临时隐藏不改系统设置；Explorer 重启、注销或重启电脑后图标会自己回来。自动测试会依次触发桌面刷新、全局刷新、模拟用户切换“显示桌面图标”，并验证退路方案（切换系统设置）能否隐藏和复原。</p>
+  <div class="row">
+    <button id="btnHide">临时隐藏系统图标</button>
+    <button id="btnShow">恢复显示</button>
+    <button class="primary" id="btnAuto4">自动测试</button>
+    <span class="status" id="st4"></span>
+  </div>
+  <h3>自动测试结果</h3>
+  <div id="res4"></div>
+  <h3>手动检查清单（先点“临时隐藏系统图标”）</h3>
+  <table id="manual4"></table>
+</section>
+
+<section id="r5">
+  <h2>风险 5：WebView2 多进程，内存能否控制在 150 MB 以内</h2>
+  <p>统计本程序及其全部子进程（msedgewebview2.exe）。工作集合计会重复计算共享的系统 DLL，偏高；“专用提交”更接近程序自身占用。请同时打开任务管理器，把“DeskTidy Demo”这一组的内存数填到下面。</p>
+  <div class="row">
+    <button id="btnMeasure0">① 加载前测量（10 秒）</button>
+    图标数 <input type="number" id="iconN" value="300" min="1" max="2000" style="width:80px">
+    <button id="btnLoad">② 加载图标</button>
+    <button id="btnMeasure1">③ 加载后测量（10 秒）</button>
+    <button id="btnMeasure2">④ 静置 1 分钟后再测（10 秒）</button>
+    <span class="status" id="st5"></span>
+  </div>
+  <div id="res5"></div>
+  <div class="row">任务管理器中“DeskTidy Demo”内存：<input type="text" id="tmMem" placeholder="例如 98.5 MB" style="width:140px"></div>
+  <div class="icons" id="iconGrid"></div>
+</section>
+
+<section id="r6">
+  <h2>风险 6：用 IFolderView 读取并写回桌面图标坐标</h2>
+  <p>自动测试会先拍快照（同时导出注册表 Bags\1\Desktop 作备份），再把桌面图标<strong>倒序打乱</strong>，最后按快照写回并比对坐标。若测试中途程序异常退出，守护进程会按快照自动写回；也可以随时点“按最新快照恢复”。</p>
+  <div class="row">
+    <button class="primary" id="btnAuto6">自动测试（会打乱再恢复桌面图标）</button>
+    <button id="btnSnap">只拍快照</button>
+    <button id="btnRestoreSnap">按最新快照恢复</button>
+    <span class="status" id="st6"></span>
+  </div>
+  <h3>自动测试结果</h3>
+  <div id="res6"></div>
+  <h3>手动检查清单</h3>
+  <table id="manual6"></table>
+</section>
+
+<section id="rep">
+  <h2>生成报告</h2>
+  <p>汇总系统信息、各项自动测试结果、手动检查和备注，保存为 demo-data\DeskTidy-Demo-报告.md，并在资源管理器中选中它。请把这个文件和 demo-data\demo-log.txt 发回来。</p>
+  <textarea id="notes" placeholder="其他观察、截图说明、异常现象…"></textarea>
+  <div class="row"><button class="primary" id="btnReport">生成并保存报告</button><span class="status" id="stRep"></span></div>
+  <div class="card"><table id="summary"></table></div>
+</section>
+
+</main>
+<pre id="log"></pre>
+
+<script>
+const App = () => window.go.main.App;
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ---------- 结果持久化（存于 demo-data\webview2，程序被 Explorer 重启带走后再打开仍在）----------
+const KEY = 'desktidy-demo-v1';
+let store = { r1: {}, r4: null, r5: {}, r6: null, manual: {}, tmMem: '', notes: '', restarts: [] };
+try { Object.assign(store, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} }
+
+// ---------- 通用 ----------
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('main section').forEach(s => s.classList.toggle('on', s.id === b.dataset.tab));
+  if (b.dataset.tab === 'rep') renderSummary();
+});
+const RLABEL = { pass: '通过', fail: '未通过', info: '信息', skip: '跳过' };
+function stepsTable(steps) {
+  if (!steps || !steps.length) return '<p>尚未运行</p>';
+  return '<table><tr><th>步骤</th><th>结果</th><th>说明</th></tr>' + steps.map(s =>
+    `<tr><td>${esc(s.name)}</td><td class="r-${s.result}">${RLABEL[s.result] || s.result}</td><td>${esc(s.detail)}</td></tr>`).join('') + '</table>';
+}
+function esc(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+async function busy(btn, statusEl, text, fn) {
+  btn.disabled = true; statusEl.textContent = text;
+  try { const m = await fn(); statusEl.textContent = typeof m === 'string' ? m : '完成'; }
+  catch (e) { statusEl.textContent = '出错：' + e; }
+  finally { btn.disabled = false; }
+}
+const logEl = $('log');
+function addLog(line) {
+  logEl.textContent += line + '\n';
+  if (logEl.textContent.length > 30000) logEl.textContent = logEl.textContent.slice(-20000);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+window.runtime.EventsOn('log', addLog);
+
+let sys = null;
+(async () => {
+  for (let i = 0; i < 20 && !window.go; i++) await sleep(100);
+  sys = await App().SystemInfo();
+  $('sys').textContent = `Windows ${sys.windows} · WebView2 ${sys.webview2} · DPI ${sys.dpi} · 显示器 ${sys.monitors.length} 个`;
+  const tail = await App().LogTail();
+  logEl.textContent = tail.split('\r\n').slice(-60).join('\n');
+  logEl.scrollTop = logEl.scrollHeight;
+})();
+
+$('btnQuit').onclick = () => App().Quit();
+$('btnRestore').onclick = async () => {
+  await App().SetPanelMode('normal').catch(() => {});
+  document.querySelector('input[name=mode][value=normal]').checked = true;
+  await App().ShowIcons().catch(e => addLog('恢复显示失败：' + e));
+};
+
+// ---------- 手动清单 ----------
+const MANUAL = {
+  manual1: {
+    cols: ['normal', 'child', 'owned', 'bottom'],
+    colNames: ['普通', 'A 子窗口', 'B 拥有', 'C 置底'],
+    rows: [
+      '手动按 Win+D 后，面板仍然可见',
+      'Win+D 后点击按钮、在输入框打字正常（含中文输入法）',
+      '打开任意程序窗口拖到面板上，面板在它下面',
+      '点击面板后，面板不会跑到其他程序窗口上面',
+      'Alt+Tab 列表里不出现面板（加分项，非必须）',
+      '重启 Explorer（任务管理器 → Windows 资源管理器 → 重新启动）后面板仍在，且仍在桌面层',
+      '面板操作流畅，无卡顿或闪烁',
+    ],
+  },
+  manual4: {
+    cols: ['r'], colNames: ['结果'],
+    rows: [
+      '隐藏后在桌面空白处右键，菜单正常弹出',
+      '隐藏后双击桌面空白处，没有异常',
+      '隐藏后在桌面按 F5 或右键“刷新”，图标保持隐藏',
+      '隐藏后修改分辨率或缩放比例，图标保持隐藏（日志会显示是否自动再次隐藏）',
+      '隐藏后在桌面右键 → 查看 → 关闭再打开“显示桌面图标”，图标保持隐藏',
+      '隐藏后往桌面复制或新建一个文件，图标保持隐藏',
+      '隐藏后重启 Explorer：图标先自动出现，5 秒内被重新隐藏（见下方 Explorer 重启记录）',
+      '隐藏后在任务管理器结束 desktidy-demo.exe（主进程）：5 秒内图标恢复显示',
+      '隐藏后注销再登录（或重启电脑），未运行 Demo 时桌面图标正常显示',
+    ],
+  },
+  manual6: {
+    cols: ['r'], colNames: ['结果'],
+    rows: [
+      '自动测试打乱时，肉眼看到桌面图标位置变化',
+      '恢复后，桌面图标与测试前完全一致',
+      '多显示器：副屏上的图标也恢复到原位（单屏可不填）',
+      '恢复后注销再登录，图标位置仍是原样（Explorer 已保存）',
+    ],
+  },
+};
+const OPTS = [['', '—'], ['pass', '✓ 通过'], ['fail', '✗ 不通过'], ['na', '不适用']];
+function renderManual(id) {
+  const m = MANUAL[id];
+  store.manual[id] = store.manual[id] || {};
+  const v = store.manual[id];
+  $(id).innerHTML = '<tr><th>检查项</th>' + m.colNames.map(c => `<th>${c}</th>`).join('') + '</tr>' +
+    m.rows.map((r, i) => '<tr><td>' + esc(r) + '</td>' + m.cols.map(c =>
+      `<td><select data-k="${i}:${c}">${OPTS.map(([k, t]) => `<option value="${k}" ${v[i + ':' + c] === k ? 'selected' : ''}>${t}</option>`).join('')}</select></td>`).join('') + '</tr>').join('');
+  $(id).querySelectorAll('select').forEach(s => s.onchange = () => { v[s.dataset.k] = s.value; save(); });
+}
+
+// ---------- 风险 1 ----------
+let clicks = 0;
+$('target').onclick = () => { clicks++; $('target').textContent = `测试按钮（点击 ${clicks} 次）`; };
+document.querySelectorAll('input[name=mode]').forEach(r => r.onchange = async () => {
+  try { await App().SetPanelMode(r.value); $('st1').textContent = '已切换到 ' + r.value; }
+  catch (e) { $('st1').textContent = '切换失败：' + e; }
+});
+function center(el) { const b = el.getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; }
+$('btnAuto1').onclick = () => busy($('btnAuto1'), $('st1'), '测试中，请不要动鼠标键盘…', async () => {
+  clicks = 0; $('target').textContent = '测试按钮（点击 0 次）'; $('typeBox').value = '';
+  const [cx, cy] = center($('target')), [ix, iy] = center($('typeBox'));
+  const res = await App().AutoTestPanel({ ClickX: cx, ClickY: cy, InputX: ix, InputY: iy, Dpr: window.devicePixelRatio });
+  await sleep(300);
+  res.steps.push({ name: 'Win+D 后鼠标点击生效', result: clicks > 0 ? 'pass' : 'fail', detail: `收到 ${clicks} 次点击` });
+  const typed = $('typeBox').value;
+  res.steps.push({ name: 'Win+D 后键盘输入生效', result: typed.includes('desk') ? 'pass' : 'fail', detail: `输入框内容：“${typed}”` });
+  res.at = new Date().toLocaleString();
+  store.r1[res.mode] = res; save(); renderR1();
+});
+function renderR1() {
+  const modes = ['normal', 'child', 'owned', 'bottom'], names = { normal: '普通（对照）', child: 'A 子窗口', owned: 'B 拥有', bottom: 'C 置底' };
+  $('res1').innerHTML = modes.filter(m => store.r1[m]).map(m => `<div class="card"><strong>${names[m]}</strong> <span class="status">${store.r1[m].at}</span>${stepsTable(store.r1[m].steps)}</div>`).join('') || '<p>尚未运行</p>';
+}
+
+// ---------- 风险 4 ----------
+$('btnHide').onclick = () => busy($('btnHide'), $('st4'), '隐藏中…', () => App().HideIcons());
+$('btnShow').onclick = () => busy($('btnShow'), $('st4'), '恢复中…', () => App().ShowIcons());
+$('btnAuto4').onclick = () => busy($('btnAuto4'), $('st4'), '测试中（约 15 秒，桌面图标会闪烁）…', async () => {
+  store.r4 = { at: new Date().toLocaleString(), steps: await App().RunRisk4() }; save(); renderR4();
+});
+function renderR4() {
+  $('res4').innerHTML = store.r4 ? `<span class="status">${store.r4.at}</span>` + stepsTable(store.r4.steps) : '<p>尚未运行</p>';
+}
+let polling = true;
+async function poll() {
+  while (true) {
+    await sleep(2000);
+    if (!polling || !window.go) continue;
+    try {
+      const s = await App().Status();
+      $('st4').title = '';
+      document.querySelector('#r4 h3').textContent =
+        `自动测试结果 · 当前：系统图标${s.listViewVisible ? '可见' : '隐藏'}，HideIcons=${s.hideIcons}，Explorer 自行重新显示 ${s.reshowCount} 次（已再次隐藏 ${s.reshowRehide} 次）`;
+      if (s.restarts.length > store.restarts.length) { store.restarts = s.restarts; save(); }
+      renderRestarts();
+    } catch (e) {}
+  }
+}
+function renderRestarts() {
+  let el = $('restarts');
+  if (!el) { el = document.createElement('div'); el.id = 'restarts'; $('r4').appendChild(el); }
+  el.innerHTML = store.restarts.length ? '<h3>Explorer 重启记录</h3><table><tr><th>时间</th><th>新桌面出现</th><th>重新隐藏完成</th><th>面板模式</th><th>面板还在</th><th>重新挂回</th></tr>' +
+    store.restarts.map(r => `<tr><td>${r.at}</td><td>${r.listViewMs} ms</td><td>${r.rehiddenMs < 0 ? '—' : r.rehiddenMs + ' ms'}</td><td>${r.panelMode}</td><td>${r.panelAlive ? '是' : '<span class="r-fail">否</span>'}</td><td>${r.panelReapplied ? '是' : '—'}</td></tr>`).join('') + '</table>' : '';
+}
+poll();
+
+// ---------- 风险 5 ----------
+function memTable(rep) {
+  if (!rep) return '';
+  const ok = rep.totalPrivateMB <= 150;
+  return `<table><tr><th>进程</th><th>PID</th><th>工作集 MB</th><th>专用提交 MB</th><th>CPU %</th></tr>` +
+    rep.processes.sort((a, b) => b.privateMB - a.privateMB).map(p => `<tr><td>${esc(p.name)}</td><td>${p.pid}</td><td>${p.workingMB.toFixed(1)}</td><td>${p.privateMB.toFixed(1)}</td><td>${p.cpuPercent.toFixed(2)}</td></tr>`).join('') +
+    `<tr><th>合计（${rep.processes.length} 个进程）</th><th></th><th>${rep.totalWorkingMB.toFixed(1)}</th><th class="${ok ? 'r-pass' : 'r-fail'}">${rep.totalPrivateMB.toFixed(1)}</th><th>${rep.totalCpuPercent.toFixed(2)}</th></tr></table>`;
+}
+const MEAS = { before: '① 加载前', after: '③ 加载后', idle: '④ 静置 1 分钟后' };
+function renderR5() {
+  let h = '';
+  if (store.r5.load) h += `<p>已加载 ${store.r5.load.loaded}/${store.r5.load.requested} 个图标，失败 ${store.r5.load.failed} 个，耗时 ${store.r5.load.ms} ms</p>`;
+  for (const k of Object.keys(MEAS)) if (store.r5[k]) h += `<div class="card"><strong>${MEAS[k]}</strong> <span class="status">${store.r5[k].at}</span>${memTable(store.r5[k])}</div>`;
+  $('res5').innerHTML = h;
+  $('tmMem').value = store.tmMem || '';
+}
+async function measure(key, btn) {
+  await busy(btn, $('st5'), '测量中（10 秒，请不要操作）…', async () => {
+    polling = false;
+    try { const r = await App().MeasureMemory(10); r.at = new Date().toLocaleString(); store.r5[key] = r; save(); renderR5(); }
+    finally { polling = true; }
+  });
+}
+$('btnMeasure0').onclick = () => measure('before', $('btnMeasure0'));
+$('btnMeasure1').onclick = () => measure('after', $('btnMeasure1'));
+$('btnMeasure2').onclick = async () => { $('st5').textContent = '静置 60 秒…'; polling = false; await sleep(60000); polling = true; measure('idle', $('btnMeasure2')); };
+$('btnLoad').onclick = () => busy($('btnLoad'), $('st5'), '提取图标中…', async () => {
+  const r = await App().LoadIcons(+$('iconN').value || 300);
+  $('iconGrid').innerHTML = r.items.map(it => `<div title="${esc(it.name)}"><img loading="lazy" src="/icons/${it.id}.png?t=${Date.now()}">${esc(it.name)}</div>`).join('');
+  store.r5.load = { requested: r.requested, loaded: r.loaded, failed: r.failed, ms: r.ms }; save(); renderR5();
+});
+$('tmMem').oninput = () => { store.tmMem = $('tmMem').value; save(); };
+
+// ---------- 风险 6 ----------
+$('btnAuto6').onclick = () => {
+  if (!confirm('将把桌面图标打乱后再按快照恢复。开始前已自动备份坐标和注册表。继续？')) return;
+  busy($('btnAuto6'), $('st6'), '测试中…', async () => {
+    store.r6 = { at: new Date().toLocaleString(), steps: await App().RunRisk6() }; save(); renderR6();
+  });
+};
+$('btnSnap').onclick = () => busy($('btnSnap'), $('st6'), '拍快照…', async () => {
+  const s = await App().TakeSnapshot(); return `${s.items.length} 个图标 → ${s.file}`;
+});
+$('btnRestoreSnap').onclick = () => busy($('btnRestoreSnap'), $('st6'), '恢复中…', async () => {
+  const r = await App().RestoreLatestSnapshot();
+  return `写回 ${r.applied} 个，缺失 ${(r.missing || []).length} 个，不一致 ${(r.mismatch || []).length} 个，最大偏差 ${r.maxDelta} px`;
+});
+function renderR6() {
+  $('res6').innerHTML = store.r6 ? `<span class="status">${store.r6.at}</span>` + stepsTable(store.r6.steps) : '<p>尚未运行</p>';
+}
+
+// ---------- 报告 ----------
+$('notes').value = store.notes || '';
+$('notes').oninput = () => { store.notes = $('notes').value; save(); };
+function verdict(steps) {
+  if (!steps || !steps.length) return '未运行';
+  if (steps.some(s => s.result === 'fail')) return '有未通过项';
+  if (steps.some(s => s.result === 'skip')) return '部分跳过';
+  return '自动项全部通过';
+}
+function renderSummary() {
+  const r1 = ['normal', 'child', 'owned', 'bottom'].map(m => `${m}：${store.r1[m] ? verdict(store.r1[m].steps) : '未运行'}`).join('；');
+  const r5 = store.r5.after ? `加载后专用提交合计 ${store.r5.after.totalPrivateMB.toFixed(1)} MB；任务管理器 ${store.tmMem || '未填写'}` : '未测量';
+  $('summary').innerHTML = `<tr><th>风险 1</th><td>${esc(r1)}</td></tr><tr><th>风险 4</th><td>${verdict(store.r4 && store.r4.steps)}</td></tr><tr><th>风险 5</th><td>${esc(r5)}</td></tr><tr><th>风险 6</th><td>${verdict(store.r6 && store.r6.steps)}</td></tr>`;
+}
+function mdSteps(steps) {
+  if (!steps || !steps.length) return '尚未运行\n';
+  return '| 步骤 | 结果 | 说明 |\n|---|---|---|\n' + steps.map(s => `| ${s.name} | ${RLABEL[s.result] || s.result} | ${String(s.detail).replace(/\|/g, '\\|')} |`).join('\n') + '\n';
+}
+function mdManual(id) {
+  const m = MANUAL[id], v = store.manual[id] || {};
+  const lbl = { '': '—', pass: '✓', fail: '✗', na: '不适用' };
+  return `| 检查项 | ${m.colNames.join(' | ')} |\n|---|${m.cols.map(() => '---').join('|')}|\n` +
+    m.rows.map((r, i) => `| ${r} | ${m.cols.map(c => lbl[v[i + ':' + c] || '']).join(' | ')} |`).join('\n') + '\n';
+}
+function mdMem(rep) {
+  if (!rep) return '未测量\n';
+  return `| 进程 | 工作集 MB | 专用提交 MB | CPU % |\n|---|---|---|---|\n` + rep.processes.map(p => `| ${p.name} (${p.pid}) | ${p.workingMB.toFixed(1)} | ${p.privateMB.toFixed(1)} | ${p.cpuPercent.toFixed(2)} |`).join('\n') +
+    `\n| **合计** | **${rep.totalWorkingMB.toFixed(1)}** | **${rep.totalPrivateMB.toFixed(1)}** | **${rep.totalCpuPercent.toFixed(2)}** |\n`;
+}
+$('btnReport').onclick = () => busy($('btnReport'), $('stRep'), '生成中…', async () => {
+  const s = sys || await App().SystemInfo();
+  const names = { normal: '普通窗口（对照）', child: 'A. 子窗口挂入桌面', owned: 'B. 桌面拥有的置底窗口', bottom: 'C. 置底窗口 + 前台监听' };
+  let md = `# DeskTidy Demo 预研报告\n\n生成时间：${new Date().toLocaleString()}\n\n## 系统信息\n\n- Windows：${s.windows}\n- WebView2：${s.webview2}\n- CPU 核数：${s.cpus}；面板 DPI：${s.dpi}\n- 显示器：${s.monitors.map(m => `(${m.Left},${m.Top})-(${m.Right},${m.Bottom})${m.Primary ? ' 主屏' : ''}`).join('；')}\n- 桌面窗口：${s.desktop}\n\n`;
+  md += `## 风险 1：面板挂桌面层\n\n`;
+  for (const m of Object.keys(names)) md += `### ${names[m]}\n\n${store.r1[m] ? `测试时间：${store.r1[m].at}\n\n` + mdSteps(store.r1[m].steps) : '尚未运行\n'}\n`;
+  md += `### 手动检查\n\n${mdManual('manual1')}\n`;
+  md += `## 风险 4：临时隐藏系统图标\n\n${store.r4 ? `测试时间：${store.r4.at}\n\n` + mdSteps(store.r4.steps) : '尚未运行\n'}\n### 手动检查\n\n${mdManual('manual4')}\n`;
+  md += `### Explorer 重启记录\n\n` + (store.restarts.length ? '| 时间 | 新桌面出现 | 重新隐藏完成 | 面板模式 | 面板还在 | 重新挂回 |\n|---|---|---|---|---|---|\n' + store.restarts.map(r => `| ${r.at} | ${r.listViewMs} ms | ${r.rehiddenMs < 0 ? '—' : r.rehiddenMs + ' ms'} | ${r.panelMode} | ${r.panelAlive ? '是' : '否'} | ${r.panelReapplied ? '是' : '—'} |`).join('\n') + '\n' : '无\n') + '\n';
+  md += `## 风险 5：内存\n\n` + (store.r5.load ? `加载 ${store.r5.load.loaded}/${store.r5.load.requested} 个图标，失败 ${store.r5.load.failed} 个，耗时 ${store.r5.load.ms} ms\n\n` : '');
+  for (const k of Object.keys(MEAS)) md += `### ${MEAS[k]}\n\n${mdMem(store.r5[k])}\n`;
+  md += `任务管理器中“DeskTidy Demo”内存：${store.tmMem || '未填写'}\n\n`;
+  md += `## 风险 6：图标位置快照\n\n${store.r6 ? `测试时间：${store.r6.at}\n\n` + mdSteps(store.r6.steps) : '尚未运行\n'}\n### 手动检查\n\n${mdManual('manual6')}\n`;
+  md += `## 备注\n\n${store.notes || '无'}\n`;
+  return '已保存：' + await App().SaveReport(md);
+});
+
+function renderAll() {
+  renderManual('manual1'); renderManual('manual4'); renderManual('manual6');
+  renderR1(); renderR4(); renderR5(); renderR6(); renderRestarts();
+}
+renderAll();
+</script>
+</body>
+</html>
