@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>桌面图标整理程序 · 需求说明</title>
+<style>
+:root {
+  --paper: #F3F5F8; --surface: #FFFFFF; --ink: #1D2733; --muted: #5B6775;
+  --rule: #DCE1E7; --accent: #2A5C8A; --accent-soft: #E6EEF6;
+  --v1: #2A5C8A; --v2: #5F7334; --v3: #7D848E; --code-bg: #F0F2F5;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #14181D; --surface: #1B2027; --ink: #E4E8ED; --muted: #9AA5B1;
+    --rule: #2E3640; --accent: #86B4E0; --accent-soft: #1F2C3A;
+    --v1: #86B4E0; --v2: #A9C07A; --v3: #9AA2AD; --code-bg: #12161B;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+  font-size: 15.5px; line-height: 1.75;
+}
+.layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; max-width: 1180px; margin: 0 auto; padding: 48px 32px 96px; }
+nav.toc { position: sticky; top: 32px; align-self: start; font-size: 14px; }
+nav.toc p { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--rule); }
+nav.toc a { display: flex; gap: 10px; padding: 5px 0 5px 14px; margin-left: -2px; border-left: 2px solid transparent; color: var(--muted); text-decoration: none; }
+nav.toc a:hover { color: var(--ink); border-left-color: var(--accent); }
+nav.toc .num { color: var(--accent); font-variant-numeric: tabular-nums; min-width: 1em; }
+main { min-width: 0; }
+header { padding-bottom: 28px; margin-bottom: 8px; border-bottom: 1px solid var(--rule); }
+header h1 { margin: 0 0 12px; font-size: 34px; line-height: 1.3; font-weight: 600; letter-spacing: 0.01em; }
+header .meta { margin: 0; color: var(--muted); font-size: 14px; }
+h2 { display: flex; align-items: baseline; gap: 14px; margin: 56px 0 16px; font-size: 22px; font-weight: 600; scroll-margin-top: 24px; }
+h2 .num { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 6px; background: var(--accent); color: var(--surface); font-size: 15px; font-weight: 600; flex: none; transform: translateY(-2px); }
+p, ul, ol { max-width: 46em; }
+p { margin: 0 0 14px; }
+ul, ol { padding-left: 1.4em; margin: 0 0 16px; }
+li { margin: 4px 0; }
+strong { font-weight: 600; }
+.table-wrap { overflow-x: auto; margin: 8px 0 22px; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; line-height: 1.65; }
+th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--rule); }
+th { font-weight: 600; color: var(--muted); font-size: 13.5px; white-space: nowrap; background: var(--paper); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { white-space: nowrap; }
+tr.chosen td { background: var(--accent-soft); }
+tr.chosen td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.ver { display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 12.5px; font-weight: 600; border: 1px solid currentColor; }
+.ver-v1 { color: var(--v1); } .ver-v2 { color: var(--v2); } .ver-v3 { color: var(--v3); }
+pre { overflow-x: auto; background: var(--code-bg); border: 1px solid var(--rule); border-radius: 8px; padding: 16px 18px; margin: 8px 0 22px; }
+code { font-family: "Cascadia Mono", Consolas, "Courier New", monospace; font-size: 13.5px; line-height: 1.6; }
+ul.tasks { list-style: none; padding: 0; }
+li.task { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px dashed var(--rule); margin: 0; }
+li.task input { margin-top: 7px; width: 16px; height: 16px; accent-color: var(--accent); flex: none; }
+li.task input:checked + label { color: var(--muted); text-decoration: line-through; }
+a:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; gap: 24px; padding: 28px 18px 64px; }
+  nav.toc { position: static; }
+  header h1 { font-size: 26px; }
+}
+@media print {
+  :root { --paper: #fff; --surface: #fff; --ink: #000; --muted: #444; --rule: #bbb; --accent: #2A5C8A; --accent-soft: #EEF3F8; --code-bg: #f6f6f6; }
+  .layout { display: block; padding: 0; }
+  nav.toc { display: none; }
+  h2 { break-after: avoid; }
+  tr, pre { break-inside: avoid; }
+  .table-wrap { overflow: visible; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc" aria-label="目录">
+<p>目录</p>
+<ol>
+<li><a href="#s1"><span class="num">1</span>背景与目标</a></li>
+<li><a href="#s2"><span class="num">2</span>核心设计决策</a></li>
+<li><a href="#s3"><span class="num">3</span>功能需求</a></li>
+<li><a href="#s4"><span class="num">4</span>非功能需求</a></li>
+<li><a href="#s5"><span class="num">5</span>技术方案建议</a></li>
+<li><a href="#s6"><span class="num">6</span>技术风险与预研项</a></li>
+<li><a href="#s7"><span class="num">7</span>待确认事项</a></li>
+</ol>
+</nav>
+<main>
+<header>
+<h1>桌面图标整理程序 · 需求说明</h1>
+<p class="meta">2026-10-27　cyx_98</p>
+</header>
+<h2 id="s1"><span class="num">1</span>背景与目标</h2>
+<p>目标是：不改动任何桌面文件，把桌面图标按分组显示，并能用键盘在 3 秒内找到并启动任意一项。现状是图标多且无序，找程序只能靠肉眼逐个扫。</p>
+<p>要达成的结果：</p>
+<ul>
+<li><strong>分组显示</strong>：图标归入可命名的分区（如“开发工具”“办公”“文档”“临时文件”），按区域一眼定位。</li>
+<li><strong>自动归类</strong>：新出现在桌面的图标按规则自动进入对应分组，不需要反复手动整理。</li>
+<li><strong>快速查找</strong>：全局快捷键呼出搜索框，支持中文拼音首字母（输入 wx 找到“微信”），回车即启动。</li>
+<li><strong>可逆</strong>：程序退出、崩溃或卸载后，桌面恢复原样，文件一个不少。</li>
+</ul>
+<p>V1 明确不做：通用启动器（不扫描开始菜单和全盘程序，只管桌面上的东西）、壁纸与小部件等装饰功能、云同步。</p>
+<p>同类产品有 Stardock Fences、腾讯桌面整理、360 桌面助手。自己写的价值在于：无广告和捆绑，归类规则按自己习惯定制，数据完全本地。</p>
+<h2 id="s2"><span class="num">2</span>核心设计决策</h2>
+<p>采用“虚拟视图”方案：桌面文件原地不动，程序关闭系统桌面图标显示，自己读取桌面目录并在桌面层绘制分组面板。这是三种可行方案里最安全、最容易做稳的一种。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>做法</th>
+<th>优点</th>
+<th>缺点</th>
+<th>结论</th>
+</tr>
+</thead>
+<tbody>
+<tr class="chosen">
+<td>A. 虚拟视图</td>
+<td>隐藏系统图标，程序读取桌面目录自绘分组</td>
+<td>不碰文件，退出即复原；布局完全自控，不受分辨率变化影响</td>
+<td>系统右键菜单、拖放等原生交互需要自己补齐</td>
+<td><strong>采用</strong></td>
+</tr>
+<tr>
+<td>B. 移动文件</td>
+<td>把文件搬进各分组对应的真实文件夹，桌面只留分组窗口</td>
+<td>实现简单</td>
+<td>文件路径改变，依赖原路径的脚本和程序会出错；软件更新会在桌面重建快捷方式；卸载要搬回</td>
+<td>不采用</td>
+</tr>
+<tr>
+<td>C. 原生图标定位</td>
+<td>画分区背景框，跨进程移动 Explorer 桌面列表里真实图标的坐标（Fences 的做法）</td>
+<td>原生交互全部保留</td>
+<td>跨进程操作 Explorer，分辨率、DPI、Explorer 重启后布局易乱；实现难度最高</td>
+<td>不采用</td>
+</tr>
+</tbody>
+</table></div>
+<p>方案 A 的运行规则：</p>
+<ol>
+<li>启动时关闭系统“显示桌面图标”，记录原状态。</li>
+<li>读取“当前用户桌面”和“公共桌面”两个目录，合并后按分组显示。</li>
+<li>监听两个目录的新增、删除、重命名，面板实时同步。</li>
+<li>正常退出、崩溃、卸载时都恢复系统图标显示（崩溃恢复见非功能需求）。</li>
+</ol>
+<h2 id="s3"><span class="num">3</span>功能需求</h2>
+<p>V1 共 10 项，做完即可替代当前桌面日常使用；V2 补齐原生交互和多显示器，V3 是锦上添花。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>功能</th>
+<th>说明</th>
+<th>版本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F01</td>
+<td>桌面项目读取</td>
+<td>合并“当前用户桌面”和“公共桌面”；支持 .lnk、.url、.exe、文件夹和普通文件；显示真实图标和名称</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F02</td>
+<td>分组管理</td>
+<td>新建、重命名、删除分组；每个分组是桌面上可拖动、可调大小的面板；删除分组时其中项目回到“未归类”</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F03</td>
+<td>手动归类</td>
+<td>拖动图标在分组间移动、在分组内排序；一个项目只属于一个分组</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F04</td>
+<td>自动归类规则</td>
+<td>条件可选扩展名、文件类型（程序/文档/图片/压缩包/文件夹/网址）、名称关键词或正则、快捷方式目标路径；按顺序匹配，首个命中生效；只作用于新出现的项目，不覆盖手动归类；另有“按规则重新整理全部”按钮</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F05</td>
+<td>未归类区</td>
+<td>不命中任何规则的新项目进入“未归类”分组并高亮，直到用户处理</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F06</td>
+<td>快速搜索</td>
+<td>全局快捷键呼出（默认 Ctrl+Alt+D，可改）；匹配名称、拼音全拼、拼音首字母；上下键选择，回车启动，Esc 关闭</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F07</td>
+<td>启动与常用操作</td>
+<td>双击或回车打开；右键菜单含打开、以管理员身份运行、打开所在位置、重命名、删除到回收站、属性</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F08</td>
+<td>布局持久化</td>
+<td>分组位置、大小、项目归属和排序全部保存，重启后完全还原</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F09</td>
+<td>系统图标隐藏与恢复</td>
+<td>启动时隐藏系统桌面图标，退出时恢复；托盘可临时切回原生桌面</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F10</td>
+<td>托盘与自启</td>
+<td>托盘图标提供设置、临时显示原生桌面、退出；开机自启开关</td>
+<td><span class="ver ver-v1">V1</span></td>
+</tr>
+<tr>
+<td>F11</td>
+<td>分组折叠</td>
+<td>分组可折叠为标题栏；双击桌面空白处一键收起或展开全部</td>
+<td><span class="ver ver-v2">V2</span></td>
+</tr>
+<tr>
+<td>F12</td>
+<td>完整系统右键菜单</td>
+<td>显示与资源管理器一致的右键菜单，含 7-Zip、Git 等第三方菜单项</td>
+<td><span class="ver ver-v2">V2</span></td>
+</tr>
+<tr>
+<td>F13</td>
+<td>拖放进出</td>
+<td>从其他窗口拖文件到分组，即放到桌面并归入该分组；从分组拖出到其他程序（如拖附件进邮件）</td>
+<td><span class="ver ver-v2">V2</span></td>
+</tr>
+<tr>
+<td>F14</td>
+<td>多显示器与 DPI</td>
+<td>每个显示器独立布局；拔插显示器或改分辨率后，分组自动收回可见区域</td>
+<td><span class="ver ver-v2">V2</span></td>
+</tr>
+<tr>
+<td>F15</td>
+<td>使用统计</td>
+<td>记录启动次数和最近使用时间；分组内可按常用度排序；搜索结果按使用频率加权</td>
+<td><span class="ver ver-v2">V2</span></td>
+</tr>
+<tr>
+<td>F16</td>
+<td>导入导出</td>
+<td>规则和布局导出为 JSON，换机或重装后导入</td>
+<td><span class="ver ver-v2">V2</span></td>
+</tr>
+<tr>
+<td>F17</td>
+<td>闲置项提示</td>
+<td>N 天未使用的项目标记出来，可一键移入“闲置”分组</td>
+<td><span class="ver ver-v3">V3</span></td>
+</tr>
+<tr>
+<td>F18</td>
+<td>外观设置</td>
+<td>分组背景颜色、透明度、毛玻璃，图标大小</td>
+<td><span class="ver ver-v3">V3</span></td>
+</tr>
+<tr>
+<td>F19</td>
+<td>文件夹映射分组</td>
+<td>一个分组直接显示某个真实文件夹的内容，不限于桌面</td>
+<td><span class="ver ver-v3">V3</span></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="s4"><span class="num">4</span>非功能需求</h2>
+<p>第一条硬性要求：程序在任何情况下都不能让桌面文件丢失，也不能让用户面对一个“图标全没了”的桌面。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>类别</th>
+<th>要求</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>文件安全</td>
+<td>程序自身从不移动、改写桌面文件；只有用户在菜单中明确选择重命名或删除时才操作，删除一律进回收站</td>
+</tr>
+<tr>
+<td>崩溃恢复</td>
+<td>一个极小的守护进程监视主进程，主进程异常退出后 5 秒内恢复系统图标显示；启动时检查上次是否异常退出</td>
+</tr>
+<tr>
+<td>Explorer 重启</td>
+<td>监听 TaskbarCreated 消息，Explorer 重启后 5 秒内重新挂回桌面层并保持隐藏系统图标</td>
+</tr>
+<tr>
+<td>桌面层行为</td>
+<td>分组面板始终在普通窗口之下；按 Win+D 或“显示桌面”后面板仍可见、可操作</td>
+</tr>
+<tr>
+<td>性能</td>
+<td>冷启动到面板显示 ≤ 2 秒；空闲 CPU 接近 0%；内存 ≤ 150 MB；桌面 500 个项目时搜索响应 ≤ 50 毫秒</td>
+</tr>
+<tr>
+<td>兼容范围</td>
+<td>Windows 10 x64（1903 及以上）；DPI 缩放 100%–200%；Windows 11 尽量兼容，不作为验收条件</td>
+</tr>
+<tr>
+<td>权限</td>
+<td>普通用户权限运行，不需要管理员；“以管理员身份运行”只作用于被启动的程序</td>
+</tr>
+<tr>
+<td>数据存储</td>
+<td>配置存于 %APPDATA% 下的 JSON 文件；写入用“临时文件 + 重命名”保证原子性，保留最近 5 份备份</td>
+</tr>
+<tr>
+<td>项目标识</td>
+<td>以文件路径识别项目；重命名通过目录监听事件跟随，分组归属不丢失</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="s5"><span class="num">5</span>技术方案建议</h2>
+<p>推荐 Wails v2：Go 负责 Win32 调用和文件监听，React + TypeScript 负责界面，渲染用系统自带的 WebView2。这个组合正好对应 TypeScript 为主、Go 为辅的技能栈，体积和常驻内存都远小于 Electron。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>常驻内存（估计）</th>
+<th>调 Win32</th>
+<th>结论</th>
+</tr>
+</thead>
+<tbody>
+<tr class="chosen">
+<td>Wails v2（Go + React）</td>
+<td>约 80–120 MB</td>
+<td>golang.org/x/sys/windows 直接调用，COM 用 go-ole</td>
+<td><strong>推荐</strong></td>
+</tr>
+<tr>
+<td>Tauri（Rust + React）</td>
+<td>约 60–100 MB</td>
+<td>windows-rs，最完整</td>
+<td>备选，需要 Rust</td>
+</tr>
+<tr>
+<td>Electron</td>
+<td>约 200 MB 以上</td>
+<td>需要 Node 原生模块</td>
+<td>不推荐，常驻桌面太重</td>
+</tr>
+<tr>
+<td>C# + WPF</td>
+<td>约 60–100 MB</td>
+<td>最方便</td>
+<td>备选，换语言</td>
+</tr>
+</tbody>
+</table></div>
+<p>“挂到桌面层、Win+D 不隐藏”这部分能力，桌面备忘程序同样需要，建议做成独立 Go 包，两个项目共用。</p>
+<p>关键实现点：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>能力</th>
+<th>实现方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>定位桌面目录</td>
+<td>SHGetKnownFolderPath，取 FOLDERID_Desktop 和 FOLDERID_PublicDesktop</td>
+</tr>
+<tr>
+<td>目录监听</td>
+<td>ReadDirectoryChangesW（fsnotify 封装），事件去抖 300 毫秒</td>
+</tr>
+<tr>
+<td>图标提取</td>
+<td>IShellItemImageFactory::GetImage，按“路径 + 修改时间”缓存为 PNG</td>
+</tr>
+<tr>
+<td>快捷方式解析</td>
+<td>IShellLink 读取目标路径，供 F04 的“目标路径”规则使用</td>
+</tr>
+<tr>
+<td>隐藏/恢复系统图标</td>
+<td>向桌面 SHELLDLL_DefView 窗口发送切换图标显示的命令，再检查 SysListView32 可见状态确认结果</td>
+</tr>
+<tr>
+<td>启动与管理员运行</td>
+<td>ShellExecuteEx，verb 分别为 open、runas、properties</td>
+</tr>
+<tr>
+<td>打开所在位置</td>
+<td>SHOpenFolderAndSelectItems</td>
+</tr>
+<tr>
+<td>删除到回收站</td>
+<td>IFileOperation，带 FOFX_RECYCLEONDELETE</td>
+</tr>
+<tr>
+<td>全局快捷键</td>
+<td>RegisterHotKey</td>
+</tr>
+<tr>
+<td>拼音搜索</td>
+<td>前端用 pinyin-pro 为每个名称生成全拼和首字母索引</td>
+</tr>
+<tr>
+<td>开机自启</td>
+<td>写 HKCU 下的 Run 注册表项</td>
+</tr>
+</tbody>
+</table></div>
+<p>配置数据模型（示意）：</p>
+<pre><code class="language-json">{
+  &quot;version&quot;: 1,
+  &quot;groups&quot;: [
+    {
+      &quot;id&quot;: &quot;g-dev&quot;,
+      &quot;name&quot;: &quot;开发工具&quot;,
+      &quot;monitor&quot;: &quot;DISPLAY1&quot;,
+      &quot;rect&quot;: { &quot;x&quot;: 40, &quot;y&quot;: 40, &quot;w&quot;: 320, &quot;h&quot;: 240 },
+      &quot;collapsed&quot;: false,
+      &quot;items&quot;: [&quot;C:\\Users\\me\\Desktop\\VS Code.lnk&quot;]
+    }
+  ],
+  &quot;rules&quot;: [
+    { &quot;id&quot;: &quot;r1&quot;, &quot;groupId&quot;: &quot;g-dev&quot;, &quot;field&quot;: &quot;shortcutTarget&quot;, &quot;op&quot;: &quot;regex&quot;, &quot;value&quot;: &quot;(?i)jetbrains|vs code&quot; }
+  ],
+  &quot;stats&quot;: {
+    &quot;C:\\Users\\me\\Desktop\\VS Code.lnk&quot;: { &quot;launches&quot;: 42, &quot;lastUsed&quot;: &quot;2026-10-27T09:00:00+08:00&quot; }
+  }
+}
+</code></pre>
+<h2 id="s6"><span class="num">6</span>技术风险与预研项</h2>
+<p>动手写 V1 之前，先用一个最小 Demo 验证第 1、4、5 项；第 1 项不通，整体方案就要调整。第 2、3 项属于 V2，可以等 V1 完成后再验证。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>风险</th>
+<th>预研方式</th>
+<th>退路</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>面板挂到桌面层后能否正常接收鼠标键盘；Win+D 后是否仍可见</td>
+<td>Demo 对比两种做法：父窗口设为桌面 WorkerW；普通窗口置底并拦截 WM_WINDOWPOSCHANGING</td>
+<td>普通置底窗口 + 监听前台窗口变化，Win+D 后自动重新显示</td>
+</tr>
+<tr>
+<td>2</td>
+<td>完整系统右键菜单（F12）需要 IContextMenu2/3 及菜单消息转发，Go 下实现繁琐</td>
+<td>用 go-ole 调 IContextMenu，TrackPopupMenu 弹出</td>
+<td>V1 自定义菜单已覆盖常用操作；必要时用 C 写一个小 DLL</td>
+</tr>
+<tr>
+<td>3</td>
+<td>WebView2 不能把本地文件作为系统拖放源（F13 拖出）</td>
+<td>鼠标按下后由 Go 侧调用 DoDragDrop 接管拖拽</td>
+<td>用“复制文件”菜单代替拖出</td>
+</tr>
+<tr>
+<td>4</td>
+<td>隐藏系统图标依赖未公开的 Explorer 行为，系统更新后可能失效</td>
+<td>在 Win10 22H2 和 Win11 各验证一次</td>
+<td>改注册表 HideIcons 值后通知 Explorer 刷新</td>
+</tr>
+<tr>
+<td>5</td>
+<td>WebView2 多进程，内存可能超过 150 MB</td>
+<td>Demo 加载 300 个图标后测量常驻内存</td>
+<td>图标懒加载、限制缓存；仍超标则改用 Tauri</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="s7"><span class="num">7</span>待确认事项</h2>
+<p>以下每项都已给出默认值；不改就按默认值进入设计。</p>
+<ul class="tasks">
+<li class="task"><input type="checkbox" id="t1"><label for="t1">是否采用方案 A（虚拟视图，文件不动）？默认：采用。</label></li>
+<li class="task"><input type="checkbox" id="t2"><label for="t2">技术栈是否用 Wails（Go + React）？默认：是。</label></li>
+<li class="task"><input type="checkbox" id="t3"><label for="t3">管理范围：只管程序快捷方式，还是文档、压缩包、文件夹等全部纳入？默认：全部纳入。</label></li>
+<li class="task"><input type="checkbox" id="t4"><label for="t4">首次运行的预设分组：开发工具、办公、文档、图片、压缩包、未归类？默认：提供这套预设，可删改。</label></li>
+<li class="task"><input type="checkbox" id="t5"><label for="t5">搜索快捷键 Ctrl+Alt+D 是否与现有软件冲突？</label></li>
+<li class="task"><input type="checkbox" id="t6"><label for="t6">Windows 11 是否也要作为验收环境？默认：否。</label></li>
+<li class="task"><input type="checkbox" id="t7"><label for="t7">程序名称。</label></li>
+</ul>
+</main>
+</div>
+</body>
+</html>
